@@ -1,0 +1,14 @@
+name: Core2FA
+version: '1.0.0'
+main: com.casmivs.twofa.TwoFA
+api-version: '1.21'
+author: CasmiVS
+description: Two-factor authentication via Telegram.
+commands:
+  2fa:
+    description: Main command for 2FA management.
+    aliases: [tfa, auth]
+permissions:
+  twofa.reload:
+    description: Allows reloading the plugin configuration.
+    default: op

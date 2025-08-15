@@ -1,0 +1,10 @@
+com\casmivs\twofa\TelegramListener.class
+com\casmivs\twofa\FoliaSchedulerAdapter.class
+com\casmivs\twofa\PlayerListener.class
+com\casmivs\twofa\BukkitSchedulerAdapter.class
+com\casmivs\twofa\TwoFA.class
+com\casmivs\twofa\LocaleManager.class
+com\casmivs\twofa\CommandManager.class
+com\casmivs\twofa\BotManager.class
+com\casmivs\twofa\SchedulerAdapter.class
+com\casmivs\twofa\DataManager.class

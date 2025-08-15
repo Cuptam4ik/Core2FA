@@ -1,0 +1,12 @@
+server-name: "YourServer"
+
+language: "en"
+
+telegram:
+  bot-token: "BOT_TOKEN_HERE"
+  bot-username: "NAME_BOT"
+
+telegram-menu:
+  settings:
+    allow-unlinking: false
+    allow-remote-ban: true
