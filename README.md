@@ -26,7 +26,7 @@ With Telegram integration, players can manage their account security quickly and
 2. Start the server to generate configuration files.
 3. Edit `config.yml`:
 
-```yaml
+
 server-name: "MyServer"         # Name displayed in Telegram notifications
 language: "en"                  # Plugin language
 
@@ -85,4 +85,3 @@ telegram-menu:
 
 MIT License – free to use, share, or modify.
 
-```
