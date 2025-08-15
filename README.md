@@ -1,4 +1,3 @@
-````markdown
 # Core2FA — Two-Factor Authentication via Telegram
 
 **Core2FA** is a Minecraft plugin (Spigot, Paper, Folia) for **1.21+** that adds two-factor authentication through Telegram.  
@@ -39,7 +38,7 @@ telegram-menu:
   settings:
     allow-unlinking: false      # Allow unlinking accounts
     allow-remote-ban: false     # Allow remote banning
-````
+
 
 4. Restart the server.
 5. Players can use `/2fa` to link their account.
