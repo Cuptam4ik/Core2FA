@@ -10,3 +10,4 @@ telegram-menu:
   settings:
     allow-unlinking: false
     allow-remote-ban: true
+  

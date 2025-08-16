@@ -1,13 +1,14 @@
 package com.casmivs.twofa;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public final class TwoFA extends JavaPlugin {
 
@@ -15,19 +16,17 @@ public final class TwoFA extends JavaPlugin {
     private DataManager dataManager;
     private BotManager botManager;
     private TelegramListener telegramListener;
-    private BukkitTask listenerTask;
     private CommandManager commandManager;
     private LocaleManager localeManager;
     private SchedulerAdapter schedulerAdapter;
+    private Thread listenerThread;
 
     public final Set<UUID> unverifiedPlayers = Collections.synchronizedSet(new HashSet<>());
 
     @Override
     public void onEnable() {
         instance = this;
-        
         initializeScheduler();
-        
         saveDefaultConfig();
         
         localeManager = new LocaleManager(this);
@@ -44,9 +43,10 @@ public final class TwoFA extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         
         telegramListener = new TelegramListener(this);
-        startAsyncTasks();
+        listenerThread = new Thread(telegramListener, "Core2FA-Telegram-Listener");
+        listenerThread.start();
         
-        getLogger().info("2FA (v" + getDescription().getVersion() + ") successfully enabled on " + schedulerAdapter.getClass().getSimpleName().replace("SchedulerAdapter", "") + "!");
+        getLogger().info("Core2FA (v" + getDescription().getVersion() + ") successfully enabled on " + schedulerAdapter.getClass().getSimpleName().replace("SchedulerAdapter", "") + "!");
     }
     
     private void initializeScheduler() {
@@ -61,43 +61,41 @@ public final class TwoFA extends JavaPlugin {
     @Override
     public void onDisable() {
         stopAsyncTasks();
-        getLogger().info("2FA disabled correctly.");
+        getLogger().info("Core2FA disabled correctly.");
     }
     
     public void reloadPluginLogic() {
-        getLogger().info("Reloading 2FA plugin...");
-        
+        getLogger().info("Reloading Core2FA plugin...");
         stopAsyncTasks();
-        
         reloadConfig();
         localeManager.loadLocales();
         dataManager.reloadConfig();
-        
         botManager = new BotManager(this);
         
         telegramListener = new TelegramListener(this);
-        startAsyncTasks();
-        
-        getLogger().info("2FA plugin successfully reloaded.");
+        listenerThread = new Thread(telegramListener, "Core2FA-Telegram-Listener-Reloaded");
+        listenerThread.start();
+        getLogger().info("Core2FA plugin successfully reloaded.");
     }
     
-    private void startAsyncTasks() {
-        if (telegramListener != null) {
-            listenerTask = getServer().getScheduler().runTaskAsynchronously(this, telegramListener);
+    public void runAsyncTaskLater(Runnable task, long delayTicks) {
+        try {
+            Bukkit.getAsyncScheduler().runDelayed(this, scheduledTask -> task.run(), delayTicks * 50, TimeUnit.MILLISECONDS);
+        } catch (Throwable t) {
+            Bukkit.getScheduler().runTaskLaterAsynchronously(this, task, delayTicks);
         }
     }
     
     private void stopAsyncTasks() {
         if (commandManager != null) {
-            commandManager.clearTokens();
+            commandManager.shutdown();
         }
         if (telegramListener != null) {
             telegramListener.stop();
-            telegramListener = null;
         }
-        if (listenerTask != null && !listenerTask.isCancelled()) {
-            listenerTask.cancel();
-            listenerTask = null;
+        if (listenerThread != null && listenerThread.isAlive()) {
+            listenerThread.interrupt();
+            listenerThread = null;
         }
     }
 

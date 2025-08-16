@@ -4,8 +4,9 @@ main: com.casmivs.twofa.TwoFA
 api-version: '1.21'
 author: CasmiVS
 description: Two-factor authentication via Telegram.
+folia-supported: true
 commands:
-  2fa:
+  '2fa':
     description: Main command for 2FA management.
     aliases: [tfa, auth]
 permissions:

@@ -34,14 +34,12 @@ public class TelegramListener implements Runnable {
             plugin.getLogger().severe("Telegram Bot Token is not set in config.yml! The bot will not start.");
             return;
         }
-
         while (running && !Thread.currentThread().isInterrupted()) {
             try {
                 HttpResponse<String> response = Unirest.get("https://api.telegram.org/bot" + botToken + "/getUpdates")
                         .queryString("offset", offset)
-                        .queryString("timeout", 5)
+                        .queryString("timeout", 0)
                         .asString();
-
                 if (response.getStatus() == 200) {
                     JSONObject responseObject = new JSONObject(response.getBody());
                     if (responseObject.getBoolean("ok")) {
@@ -80,12 +78,11 @@ public class TelegramListener implements Runnable {
         String text = message.getString("text");
         long chatId = message.getJSONObject("chat").getLong("id");
         UUID playerUUID = plugin.getDataManager().findUUIDbyTelegramId(chatId);
-
         if (text.startsWith("/start") || text.startsWith("/menu")) {
             if (playerUUID != null) {
                 plugin.getBotManager().sendMenuMessage(chatId);
             } else {
-                if(text.startsWith("/start")) {
+                if (text.startsWith("/start")) {
                     String token = UUID.randomUUID().toString().substring(0, 8);
                     CommandManager.pendingTokens.put(token, chatId);
                     plugin.getCommandManager().scheduleTokenRemoval(token, 5, TimeUnit.MINUTES);
@@ -136,9 +133,11 @@ public class TelegramListener implements Runnable {
 
         switch (action) {
             case "info": {
-                String rawInfo = lm.getTelegramString("telegram.info_message", "%player_name%", player.getName(), "%player_uuid%", playerUUID.toString());
-                String processedInfo = BotManager.minecraftToTelegramHTML(lm.getString("prefix") + rawInfo);
-                plugin.getBotManager().editMessageWithKeyboard(chatId, messageId, processedInfo, buildBackButton());
+                String prefix = lm.getTelegramString("prefix");
+                String infoBody = lm.getTelegramString("telegram.info_message", "%player_name%", player.getName(), "%player_uuid%", playerUUID.toString());
+                String fullMessage = prefix + "\n" + infoBody;
+                String processedMessage = BotManager.minecraftToTelegramHTML(fullMessage);
+                plugin.getBotManager().editMessageWithKeyboard(chatId, messageId, processedMessage, buildBackButton());
                 break;
             }
             case "toggle_2fa": {
@@ -157,6 +156,7 @@ public class TelegramListener implements Runnable {
                     key = "telegram.action.terminate_success";
                 }
                 plugin.getBotManager().editMessageWithKeyboard(chatId, messageId, lm.getTelegramString(key), buildBackButton());
+                plugin.runAsyncTaskLater(() -> plugin.getBotManager().editToMenuMessage(chatId, messageId), 60L);
                 break;
             }
             case "unlink": {
@@ -187,19 +187,21 @@ public class TelegramListener implements Runnable {
             }
             case "ban_confirm": {
                 String reason = lm.getString("telegram.action.ban_reason");
-                plugin.getSchedulerAdapter().banPlayer(player.getName(), reason, "2FA");
+                plugin.getSchedulerAdapter().banPlayer(player.getName(), reason, "Core2FA");
                 Player onlinePlayer = player.getPlayer();
                 if (onlinePlayer != null) {
                     plugin.getSchedulerAdapter().kickPlayer(onlinePlayer, lm.getString("telegram.action.ban_kick_message"));
                 }
                 answerCallbackQuery(callbackQueryId, lm.getTelegramString("telegram.action.ban_success"), false);
-                plugin.getBotManager().editToMenuMessage(chatId, messageId);
+                plugin.getBotManager().editMessage(chatId, messageId, lm.getTelegramString("telegram.action.ban_success"));
+                plugin.runAsyncTaskLater(() -> plugin.getBotManager().editToMenuMessage(chatId, messageId), 60L);
                 break;
             }
             case "unban_confirm": {
                 plugin.getSchedulerAdapter().unbanPlayer(player.getName());
                 answerCallbackQuery(callbackQueryId, lm.getTelegramString("telegram.action.unban_success"), false);
-                plugin.getBotManager().editToMenuMessage(chatId, messageId);
+                plugin.getBotManager().editMessage(chatId, messageId, lm.getTelegramString("telegram.action.unban_success"));
+                plugin.runAsyncTaskLater(() -> plugin.getBotManager().editToMenuMessage(chatId, messageId), 60L);
                 break;
             }
             case "back_to_menu": {

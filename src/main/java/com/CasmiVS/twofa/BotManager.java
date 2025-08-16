@@ -31,13 +31,12 @@ public class BotManager {
     public void sendMenuMessage(long chatId) {
         String apiUrl = getApiUrl();
         if (apiUrl == null) return;
-
         UUID playerUUID = plugin.getDataManager().findUUIDbyTelegramId(chatId);
         if (playerUUID == null) return;
 
         OfflinePlayer player = Bukkit.getOfflinePlayer(playerUUID);
         boolean is2faEnabled = plugin.getDataManager().is2faEnabled(playerUUID);
-        boolean isBanned = player.getName() != null && Bukkit.getBanList(BanList.Type.NAME).isBanned(player.getName());
+        boolean isBanned = player.isBanned();
         
         String status2fa = plugin.getLocaleManager().getTelegramString(is2faEnabled ? "telegram.menu.status_2fa_enabled" : "telegram.menu.status_2fa_disabled");
         String statusBan = plugin.getLocaleManager().getTelegramString(isBanned ? "telegram.menu.status_ban_active" : "telegram.menu.status_ban_inactive");
@@ -48,14 +47,12 @@ public class BotManager {
                 "%ban_status%", statusBan
         );
         
-       
-        String processedText = minecraftToTelegramHTML(ChatColor.translateAlternateColorCodes('&', rawText));
+        String processedText = minecraftToTelegramHTML(rawText);
         JSONObject keyboard = buildMenuKeyboard(is2faEnabled);
-      
 
         Unirest.post(apiUrl + "/sendMessage")
                 .field("chat_id", String.valueOf(chatId))
-                .field("text", processedText) 
+                .field("text", processedText)
                 .field("parse_mode", "HTML")
                 .field("reply_markup", keyboard.toString())
                 .asJsonAsync();
@@ -64,13 +61,12 @@ public class BotManager {
     public void editToMenuMessage(long chatId, long messageId) {
         String apiUrl = getApiUrl();
         if (apiUrl == null) return;
-
         UUID playerUUID = plugin.getDataManager().findUUIDbyTelegramId(chatId);
         if (playerUUID == null) return;
         
         OfflinePlayer player = Bukkit.getOfflinePlayer(playerUUID);
         boolean is2faEnabled = plugin.getDataManager().is2faEnabled(playerUUID);
-        boolean isBanned = player.getName() != null && Bukkit.getBanList(BanList.Type.NAME).isBanned(player.getName());
+        boolean isBanned = player.isBanned();
         
         String status2fa = plugin.getLocaleManager().getTelegramString(is2faEnabled ? "telegram.menu.status_2fa_enabled" : "telegram.menu.status_2fa_disabled");
         String statusBan = plugin.getLocaleManager().getTelegramString(isBanned ? "telegram.menu.status_ban_active" : "telegram.menu.status_ban_inactive");
@@ -80,15 +76,12 @@ public class BotManager {
                 "%2fa_status%", status2fa,
                 "%ban_status%", statusBan
         );
-   
-        String processedText = minecraftToTelegramHTML(ChatColor.translateAlternateColorCodes('&', rawText));
-        JSONObject keyboard = buildMenuKeyboard(is2faEnabled);
         
-
+        String processedText = minecraftToTelegramHTML(rawText);
+        JSONObject keyboard = buildMenuKeyboard(is2faEnabled);
         editMessageWithKeyboard(chatId, messageId, processedText, keyboard.toString());
     }
 
-  
     public void requestLoginConfirmation(long chatId, String ipAddress) {
         String apiUrl = getApiUrl();
         if (apiUrl == null) return;
@@ -115,14 +108,9 @@ public class BotManager {
         LocaleManager lm = plugin.getLocaleManager();
         JSONObject keyboard = new JSONObject();
         JSONArray rows = new JSONArray();
-
         rows.put(new JSONArray().put(new JSONObject().put("text", lm.getTelegramString("telegram.menu.buttons.info")).put("callback_data", "menu:info")));
-        
         String toggleText = is2faEnabled ? lm.getTelegramString("telegram.menu.buttons.toggle_2fa_off") : lm.getTelegramString("telegram.menu.buttons.toggle_2fa_on");
-        rows.put(new JSONArray()
-                .put(new JSONObject().put("text", toggleText).put("callback_data", "menu:toggle_2fa"))
-                .put(new JSONObject().put("text", lm.getTelegramString("telegram.menu.buttons.terminate_sessions")).put("callback_data", "menu:terminate")));
-
+        rows.put(new JSONArray().put(new JSONObject().put("text", toggleText).put("callback_data", "menu:toggle_2fa")).put(new JSONObject().put("text", lm.getTelegramString("telegram.menu.buttons.terminate_sessions")).put("callback_data", "menu:terminate")));
         JSONArray thirdRow = new JSONArray();
         if (plugin.getConfig().getBoolean("telegram-menu.settings.allow-unlinking", false)) {
             thirdRow.put(new JSONObject().put("text", lm.getTelegramString("telegram.menu.buttons.unlink_account")).put("callback_data", "menu:unlink"));
@@ -133,7 +121,6 @@ public class BotManager {
         if (!thirdRow.isEmpty()) {
             rows.put(thirdRow);
         }
-
         keyboard.put("inline_keyboard", rows);
         return keyboard;
     }
@@ -156,59 +143,52 @@ public class BotManager {
         Unirest.post(apiUrl + "/editMessageText").field("chat_id", String.valueOf(chatId)).field("message_id", String.valueOf(messageId)).field("text", text).field("parse_mode", "HTML").field("reply_markup", keyboard).asJsonAsync();
     }
 
-  
-    public static String minecraftToTelegramHTML(String message) {
-        if (message == null || message.isEmpty()) return "";
+    public static String minecraftToTelegramHTML(String rawMessage) {
+        if (rawMessage == null || rawMessage.isEmpty()) return "";
 
-        
-        message = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        String text = ChatColor.translateAlternateColorCodes('&', rawMessage);
+        text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 
-        
         Pattern pattern = Pattern.compile("§([0-9a-fklmnor])");
-        Matcher matcher = pattern.matcher(message);
+        Matcher matcher = pattern.matcher(text);
         StringBuilder sb = new StringBuilder();
         StringBuilder openTags = new StringBuilder();
 
         while (matcher.find()) {
-            matcher.appendReplacement(sb, ""); 
-            char code = matcher.group(1).toLowerCase().charAt(0);
-            
-           
+            matcher.appendReplacement(sb, "");
+
             if (openTags.length() > 0) {
-                sb.append(openTags.reverse());
+                sb.append(openTags.reverse().toString());
                 openTags.setLength(0);
             }
 
+            char code = matcher.group(1).toLowerCase().charAt(0);
             switch (code) {
-                case 'l': // Bold
+                case 'l':
                     sb.append("<b>");
                     openTags.append("</b>");
                     break;
-                case 'o': // Italic
+                case 'o':
                     sb.append("<i>");
                     openTags.append("</i>");
                     break;
-                case 'n': // Underline
+                case 'n':
                     sb.append("<u>");
                     openTags.append("</u>");
                     break;
-                case 'm': // Strikethrough
+                case 'm':
                     sb.append("<s>");
                     openTags.append("</s>");
                     break;
-                case 'r': // Reset
-                    
-                    break;
+                case 'r':
                 default:
-                 
                     break;
             }
         }
         matcher.appendTail(sb);
-        
-       
+
         if (openTags.length() > 0) {
-            sb.append(openTags.reverse());
+            sb.append(openTags.reverse().toString());
         }
 
         return sb.toString();
