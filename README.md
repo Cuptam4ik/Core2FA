@@ -19,32 +19,6 @@ With Telegram integration, players can manage their account security quickly and
 - **Folia Support**: Optimized for Folia-based servers.
 
 ---
-
-## ⚙ Setup
-
-1. Place the plugin into your `/plugins` folder.
-2. Start the server to generate configuration files.
-3. Edit `config.yml`:
-
-
-server-name: "MyServer"         # Name displayed in Telegram notifications
-language: "en"                  # Plugin language
-
-telegram:
-  bot-token: "BOT_TOKEN_HERE"   # Your Telegram bot token
-  bot-username: "NAME_BOT"      # Your bot’s username
-
-telegram-menu:
-  settings:
-    allow-unlinking: false      # Allow unlinking accounts
-    allow-remote-ban: false     # Allow remote banning
-
-
-4. Restart the server.
-5. Players can use `/2fa` to link their account.
-
----
-
 ## 📜 Commands
 
 | Command            | Aliases         | Description                                                    |
